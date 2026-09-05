@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling==1.32.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "integration-recovery"
+version = "1.0.0"
+description = "Detect auth, schema, webhook and rate-limit drift in third-party integrations and generate an ordered, machine-readable compatibility repair plan."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "API Disk Integrations" }]
+keywords = ["api", "sdk", "integration-recovery"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = []
+
+[tool.hatch.build]
+ignore-vcs = true
+
+[project.urls]
+Homepage = "https://integrationrecovery-api.com/"
+Documentation = "https://integrationrecovery-api.com/#docs"
+Pricing = "https://integrationrecovery-api.com/#pricing"
+Privacy = "https://integrationrecovery-api.com/privacy"
+Terms = "https://integrationrecovery-api.com/terms"
+Source = "https://github.com/API-Disk-Integrations/integration-recovery"
+Issues = "https://github.com/API-Disk-Integrations/integration-recovery/issues"
+Changelog = "https://github.com/API-Disk-Integrations/integration-recovery/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/integration_recovery"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/LICENSE",
+  "/README.md",
+  "/pyproject.toml",
+  "/src/integration_recovery/__init__.py",
+]
