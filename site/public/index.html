@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Integration Recovery API: the drift that breaks your calls</title>
+<meta name="description" content="Compare two observations of a third-party API: every auth, schema, webhook and rate-limit change classified breaking, degraded or safe, with a repair plan.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2319651F'/></svg>">
+<style>:root{--brand-50:#ECF6ED;--brand-300:#91D497;--brand-600:#1E7725;--brand-700:#19651F;--brand-800:#145019;--brand-900:#0F3B13;--accent:#95258B;}</style>
+<link rel="stylesheet" href="/base.css">
+<style>
+/* Page-scoped components. Design tokens only — no raw colour values (spec 28). */
+.section-lede { color: var(--ink-2); font-size: var(--t-md); }
+.pain h3 { margin-bottom: var(--s2); }
+.pain p  { color: var(--ink-2); font-size: var(--t-base); }
+
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3);
+         margin: 0 0 var(--s6); padding: 0; list-style: none; }
+.chain .step { font: 700 var(--t-xs)/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+            letter-spacing: .04em; text-transform: uppercase; color: var(--brand-800);
+            background: var(--brand-50); border: 1px solid var(--brand-300);
+            border-radius: 999px; padding: 4px 12px; }
+.chain .arrow { color: var(--ink-3); font-weight: 700; }
+
+.flow { display: grid; gap: var(--s4); grid-template-columns: 1fr; margin: 0; padding: 0; list-style: none; }
+.flow li { background: var(--surface); border: 1px solid var(--border);
+           border-left: 3px solid var(--brand-600); border-radius: var(--radius);
+           padding: var(--s4) var(--s5); }
+.flow .stage { display: block; font: 700 var(--t-xs)/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+               letter-spacing: .08em; color: var(--brand-700); margin-bottom: var(--s2); }
+.flow h3 { font-size: var(--t-md); margin-bottom: var(--s1); }
+.flow p  { color: var(--ink-2); font-size: var(--t-sm); }
+
+.cost { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s5); }
+.cost li { display: grid; gap: var(--s2) var(--s4); grid-template-columns: 1fr;
+           padding-bottom: var(--s5); border-bottom: 1px solid var(--border); }
+.cost li:last-child { padding-bottom: 0; border-bottom: 0; }
+.cost .tag { justify-self: start; font: 700 var(--t-xs)/1.5 ui-sans-serif, system-ui, sans-serif;
+             letter-spacing: .08em; text-transform: uppercase; color: var(--brand-800);
+             background: var(--brand-50); border: 1px solid var(--brand-300);
+             border-radius: 999px; padding: 2px 10px; }
+.cost strong { display: block; font-size: var(--t-md); margin-bottom: var(--s1); }
+.cost p { color: var(--ink-2); font-size: var(--t-sm); }
+
+.out-full { max-height: none; }
+.links-inline { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5);
+                margin-top: var(--s4); font-size: var(--t-sm); color: var(--ink-3); }
+.links-inline a { word-break: break-all; }
+
+/* The asymmetry, as a table — the state machine an integrator codes against. */
+.spec { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+.spec th, .spec td { text-align: left; padding: var(--s3) var(--s4);
+                               border-bottom: 1px solid var(--border); vertical-align: top; }
+.spec thead th { font-size: var(--t-xs); letter-spacing: .08em; text-transform: uppercase;
+                      color: var(--ink-3); font-weight: 600; }
+.spec td:first-child { white-space: nowrap; }
+.spec td:nth-child(2) { color: var(--ink-2); }
+.spec td:last-child { color: var(--ink-2); }
+.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+
+.terms { columns: 1; margin: 0; padding: 0; list-style: none; font-size: var(--t-sm); }
+.terms li { break-inside: avoid; padding: var(--s2) 0; color: var(--ink-2); }
+.terms code { color: var(--brand-800); font-weight: 600; }
+@media (min-width: 700px) { .terms { columns: 2; column-gap: var(--s7); } }
+
+@media (min-width: 640px) {
+  .flow { grid-template-columns: repeat(2, 1fr); }
+  .cost li { grid-template-columns: 120px 1fr; }
+}
+@media (min-width: 1000px) { .flow { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+
+<body>
+<a class="btn" href="#main" style="position:absolute;left:-9999px" onfocus="this.style.left='8px';this.style.top='8px';this.style.position='fixed';this.style.zIndex='99'">Skip to content</a>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="dot"></span>Integration Recovery</a>
+    <nav>
+      <a href="#solution" class="nav-hide">How it works</a>
+      <a href="#api" class="nav-hide">API</a>
+      <a href="/use-cases/api-schema-drift-detection-and-repair" class="nav-hide">Use case</a>
+      <a href="#pricing">Pricing</a>
+      <a href="/docs" class="nav-hide">Docs</a>
+      <a class="btn btn-primary" style="min-height:36px;font-size:14px" href="#get-key" data-ev="header_cta">Get Free API Key</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ===== HERO ========================================================== -->
+<section class="hero">
+    <!-- Decorative. Colour is var(--brand-700) via base.css; see .hero-waves there. -->
+    <div class="hero-waves" aria-hidden="true">
+      <svg viewBox="0 0 1200 560" preserveAspectRatio="xMinYMin meet" focusable="false">
+        <g class="hw hw1"><g class="hw-d">
+          <path class="sheet" d="M 0 198 C 150 246 330 292 520 234 C 700 176 880 142 1200 168 L 1200 560 L 0 560 Z"></path>
+          <path class="fold" d="M 0 198 C 150 246 330 292 520 234 C 700 176 880 142 1200 168"></path>
+          <path class="crease" d="M 0 198 C 150 246 330 292 520 234 C 700 176 880 142 1200 168"></path>
+        </g></g>
+        <g class="hw hw2"><g class="hw-d">
+          <path class="sheet" d="M 0 284 C 150 330 330 376 520 318 C 700 260 880 226 1200 252 L 1200 560 L 0 560 Z"></path>
+          <path class="fold" d="M 0 284 C 150 330 330 376 520 318 C 700 260 880 226 1200 252"></path>
+          <path class="crease" d="M 0 284 C 150 330 330 376 520 318 C 700 260 880 226 1200 252"></path>
+        </g></g>
+        <g class="hw hw3"><g class="hw-d">
+          <path class="sheet" d="M 0 374 C 150 420 330 466 520 408 C 700 350 880 316 1200 340 L 1200 560 L 0 560 Z"></path>
+          <path class="fold" d="M 0 374 C 150 420 330 466 520 408 C 700 350 880 316 1200 340"></path>
+          <path class="crease" d="M 0 374 C 150 420 330 466 520 408 C 700 350 880 316 1200 340"></path>
+        </g></g>
+        <g class="hw hw4"><g class="hw-d">
+          <path class="sheet" d="M 0 460 C 150 506 330 552 520 494 C 700 436 880 402 1200 428 L 1200 560 L 0 560 Z"></path>
+          <path class="fold" d="M 0 460 C 150 506 330 552 520 494 C 700 436 880 402 1200 428"></path>
+          <path class="crease" d="M 0 460 C 150 506 330 552 520 494 C 700 436 880 402 1200 428"></path>
+        </g></g>
+      </svg>
+    </div>
+
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">INTEGRATION DRIFT &amp; REPAIR API</span>
+      <h1 style="margin-top:12px">A field added to a response is free. The same field required on a request rejects every call.</h1>
+      <p class="lede read">Send two observations of a third-party integration (response schema, auth requirements, webhook payloads, rate-limit headers) and get every change classified breaking, degraded or safe, with an ordered repair plan for the ones that break you. Severity turns on direction: whether your client produces the value or the provider does. Get that backwards and a drift report is noise, which is why people turn them off.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#get-key" data-ev="hero_cta">Get Free API Key</a>
+        <a class="btn btn-secondary" href="#example" data-ev="example_click">See the output</a>
+      </div>
+      <div class="hero-meta">
+        <span>Free tier: <b>200 integration checks</b>/month</span>
+        <span>Paid from <b>$199/month</b></span>
+        <span><b>No card</b> to run the demo</span>
+      </div>
+    </div>
+
+    <div class="panel" id="try">
+      <div class="panel-head">
+        <span class="label">Live drift check</span>
+        <span class="chip chip-info" id="demo-status">Ready</span>
+      </div>
+      <div class="panel-body">
+        <label class="field" for="demo-in">Two snapshots of a payments API. Move <code>statement_descriptor</code> from <code>request</code> to <code>response</code> and watch it stop being breaking.</label>
+        <textarea id="demo-in" rows="18" spellcheck="false" aria-describedby="demo-hint">{
+  &quot;check&quot;: {
+    &quot;integrationId&quot;: &quot;acme-payments-prod&quot;,
+    &quot;provider&quot;: &quot;northwind-payments&quot;,
+    &quot;previous&quot;: {
+      &quot;capturedAt&quot;: &quot;2026-05-01T00:00:00Z&quot;,
+      &quot;endpoints&quot;: [{
+        &quot;method&quot;: &quot;POST&quot;, &quot;path&quot;: &quot;/v1/charges&quot;,
+        &quot;request&quot;: [
+          { &quot;path&quot;: &quot;amount&quot;, &quot;type&quot;: &quot;integer&quot;, &quot;required&quot;: true },
+          { &quot;path&quot;: &quot;currency&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true,
+            &quot;enumValues&quot;: [&quot;USD&quot;, &quot;EUR&quot;, &quot;GBP&quot;] }
+        ],
+        &quot;response&quot;: [
+          { &quot;path&quot;: &quot;status&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true,
+            &quot;enumValues&quot;: [&quot;pending&quot;, &quot;succeeded&quot;] },
+          { &quot;path&quot;: &quot;receipt_url&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true }
+        ]
+      }],
+      &quot;auth&quot;: { &quot;scheme&quot;: &quot;oauth2&quot;, &quot;requiredScopes&quot;: [&quot;charges:write&quot;] },
+      &quot;rateLimit&quot;: { &quot;limit&quot;: 1000, &quot;windowSeconds&quot;: 60 }
+    },
+    &quot;current&quot;: {
+      &quot;capturedAt&quot;: &quot;2026-08-01T00:00:00Z&quot;,
+      &quot;endpoints&quot;: [{
+        &quot;method&quot;: &quot;POST&quot;, &quot;path&quot;: &quot;/v1/charges&quot;,
+        &quot;request&quot;: [
+          { &quot;path&quot;: &quot;amount&quot;, &quot;type&quot;: &quot;integer&quot;, &quot;required&quot;: true },
+          { &quot;path&quot;: &quot;currency&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true,
+            &quot;enumValues&quot;: [&quot;USD&quot;, &quot;EUR&quot;] },
+          { &quot;path&quot;: &quot;statement_descriptor&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true }
+        ],
+        &quot;response&quot;: [
+          { &quot;path&quot;: &quot;status&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true,
+            &quot;enumValues&quot;: [&quot;pending&quot;, &quot;succeeded&quot;, &quot;requires_action&quot;] },
+          { &quot;path&quot;: &quot;receiptUrl&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true },
+          { &quot;path&quot;: &quot;network_code&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: false }
+        ]
+      }],
+      &quot;auth&quot;: { &quot;scheme&quot;: &quot;oauth2&quot;,
+                &quot;requiredScopes&quot;: [&quot;charges:write&quot;, &quot;charges:read&quot;] },
+      &quot;rateLimit&quot;: { &quot;limit&quot;: 600, &quot;windowSeconds&quot;: 60 }
+    },
+    &quot;usage&quot;: {
+      &quot;heldScopes&quot;: [&quot;charges:write&quot;],
+      &quot;observedVolume&quot;: { &quot;requests&quot;: 800, &quot;windowSeconds&quot;: 60 }
+    }
+  }
+}</textarea>
+        <div class="cta-row" style="margin-top:16px">
+          <button class="btn btn-primary" id="demo-run" data-ev="demo_run">Check this integration</button>
+          <button class="btn btn-secondary" id="demo-reset" type="button">Reset</button>
+        </div>
+        <p class="hint" id="demo-hint">Runs the same engine the paid endpoint uses. Nothing is stored and no key is needed.</p>
+        <div style="margin-top:16px"><pre class="out" id="demo-out" aria-live="polite" tabindex="0">Press “Check this integration” to call the live API.</pre></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 1 · PROBLEM =================================================== -->
+<section id="problem" class="sunken">
+  <div class="wrap">
+    <span class="eyebrow">The problem</span>
+    <h2 style="margin:12px 0 16px;max-width:760px">The change is in someone else's repository.</h2>
+    <p class="read section-lede" style="margin-bottom:32px">Nothing in your codebase moved. Your tests pass, because they run against fixtures you wrote. The provider tightened a field, renamed a key, halved a limit: and the first thing you learn about it is a support ticket.</p>
+    <div class="grid grid-3 pain">
+      <div class="card">
+        <h3>A changelog is not a diff, and a diff is not an answer</h3>
+        <p>Some providers publish a changelog. Some publish an OpenAPI file. Diffing two of those gives you two hundred lines in which every change carries equal weight, so somebody has to read all of them to find the four that matter. That reading happens once, in the week the migration is announced, and never again.</p>
+      </div>
+      <div class="card">
+        <h3>The same key lives on both sides of the same call</h3>
+        <p><code>status</code> is in the request and in the response. A tool that treats a field as a field is wrong about half of them: it flags the harmless additions and stays quiet about the response field your parser dereferences. Noise in one direction, silence in the other.</p>
+      </div>
+      <div class="card">
+        <h3>The worst failures do not raise anything</h3>
+        <p>A withdrawn webhook event throws no exception. A renamed <code>X-RateLimit-Remaining</code> reads as absent, which looks exactly like unlimited headroom, so the client speeds up. Nothing is logged, because from your process's point of view nothing happened.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 2 · CONSEQUENCE =============================================== -->
+<section id="consequence">
+  <div class="wrap">
+    <span class="eyebrow">What it costs</span>
+    <h2 style="margin:12px 0 16px;max-width:760px">Three ways a contract change reaches production before you do.</h2>
+    <p class="read section-lede" style="margin-bottom:32px">None of these are bugs in your code, and none of them are caught by your test suite. They are all decisions someone else made and shipped.</p>
+    <ul class="cost read" style="max-width:820px">
+      <li>
+        <span class="tag">Rejected</span>
+        <div>
+          <strong>A field that became required</strong>
+          <p>The provider adds one mandatory parameter. Every call you make is refused from the moment their change deploys, and the error names a field that has never appeared in your code. Fixing it is ten minutes; noticing it took the length of an outage.</p>
+        </div>
+      </li>
+      <li>
+        <span class="tag">Silent</span>
+        <div>
+          <strong>A webhook that simply stops</strong>
+          <p>An event is retired. No delivery, no failure, no retry, nothing in the dead-letter queue: the notifications just end. Your state goes stale at whatever rate that entity changes, and the first report is a customer describing something that should have updated days ago.</p>
+        </div>
+      </li>
+      <li>
+        <span class="tag">Throttled</span>
+        <div>
+          <strong>A limit cut you had no way to see</strong>
+          <p>The published limit drops and the throttle headers are renamed at the same time. Your client reads the old header, gets nothing, treats it as no constraint, and keeps its pace. The 429s start at your busiest hour, which is exactly when the retry storm is worst.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+
+<!-- ===== 3 · SOLUTION ================================================== -->
+<section id="solution" class="sunken">
+  <div class="wrap">
+    <span class="eyebrow">What it computes</span>
+    <h2 style="margin:12px 0 16px;max-width:760px">Direction first, then severity, then the repair.</h2>
+    <p class="read section-lede" style="margin-bottom:24px">You supply the two snapshots: from an OpenAPI file, a recorded response, the provider's own docs. The engine does not crawl anything, call the provider, or ask a model what a clause means. It compares what you give it and says what it means for a client pointed in a particular direction.</p>
+    <div class="table-scroll" style="margin-bottom:32px">
+      <table class="spec">
+        <thead><tr><th>Output</th><th>What it answers</th><th>Why a plain diff gets it wrong</th></tr></thead>
+        <tbody>
+          <tr><td><strong>direction</strong></td><td>Whether your client produces the value or the provider does.</td><td>A diff has no notion of who writes a field, so it cannot tell the two cases apart.</td></tr>
+          <tr><td><strong>severity</strong></td><td>Breaking, degraded or safe, per change.</td><td>The same edit is a rejected call on a request and free data on a response.</td></tr>
+          <tr><td><strong>verdict</strong></td><td>compatible, degraded or broken, for the integration as a whole.</td><td>A list of changes is not a decision; a queue needs one.</td></tr>
+          <tr><td><strong>repairPlan</strong></td><td>An ordered remediation per breaking and degraded change, with parameters.</td><td>A diff stops at “this changed”.</td></tr>
+          <tr><td><strong>autoApplicable</strong></td><td>Whether a step may run unattended.</td><td>Confidence and safety are different questions, and merging them is how bad patches get applied.</td></tr>
+          <tr><td><strong>rateLimit</strong></td><td>Whether your observed volume still fits, by how much it misses, and the exact backoff.</td><td>Two limits in different windows are not comparable without exact integer arithmetic.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="chain">
+      <span class="step">Two snapshots</span><span class="arrow" aria-hidden="true">→</span>
+      <span class="step">Direction</span><span class="arrow" aria-hidden="true">→</span>
+      <span class="step">Severity</span><span class="arrow" aria-hidden="true">→</span>
+      <span class="step">Verdict</span><span class="arrow" aria-hidden="true">→</span>
+      <span class="step">Repair plan</span><span class="arrow" aria-hidden="true">→</span>
+      <span class="step">Into your CI</span>
+    </p>
+    <ul class="flow">
+      <li>
+        <span class="stage">01</span>
+        <h3>Direction is structural</h3>
+        <p>Request fields are outbound, response fields and webhook payloads are inbound. It is not a flag you can set wrongly: it comes from where the field sits in the snapshot, so the classification cannot be argued with.</p>
+      </li>
+      <li>
+        <span class="stage">02</span>
+        <h3>Every asymmetry, both ways round</h3>
+        <p>A removed enum value is breaking on what you send and a dead branch on what you read. A widened type is safe outbound and breaking inbound; a narrowed one is the reverse. A nullable response dereferences to null; a nullable request is a restriction lifted.</p>
+      </li>
+      <li>
+        <span class="stage">03</span>
+        <h3>Renames, only when they cannot be wrong</h3>
+        <p><code>receipt_url</code> and <code>receiptUrl</code> pair up when the names match once case and punctuation are stripped, the types and nullability match, and the pairing is one-to-one. Anything looser stays two changes: a wrong rename does not fail, it reads the wrong value.</p>
+      </li>
+      <li>
+        <span class="stage">04</span>
+        <h3>Missing usage never buys a lower severity</h3>
+        <p>Tell it which scopes your token holds, which events you subscribe to and how much traffic you send, and it can rule changes out. Leave those out and it will not: a new scope stays breaking, and a reduced limit stays degraded rather than safe.</p>
+      </li>
+      <li>
+        <span class="stage">05</span>
+        <h3>A plan you apply in order</h3>
+        <p>Auth first: nothing else is testable without a working credential. Then routing, then what you send, then what you read, then webhooks, then throughput. Each step carries an integer confidence and a flag for whether it may run unattended.</p>
+      </li>
+      <li>
+        <span class="stage">06</span>
+        <h3>Limits in exact integers</h3>
+        <p>100 per minute against 5,000 per hour is compared by cross-multiplying integers, never by dividing into a float. Permitted volume is floored, the pacing interval is rounded up, and both round the way that fails closed.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+
+<!-- ===== 4 · PROOF / EXAMPLE =========================================== -->
+<section id="example">
+  <div class="wrap">
+    <span class="eyebrow">Example output</span>
+    <h2 style="margin:12px 0 16px;max-width:760px">Seven changes. Five break you. One of them is free.</h2>
+    <p class="read section-lede" style="margin-bottom:24px">The payload in the demo panel, as returned by <code>POST /v1/checks</code>. Note the two <code>field_added</code> entries: <code>statement_descriptor</code> on the request is breaking, <code>network_code</code> on the response is safe. Same code, opposite direction, opposite answer.</p>
+    <pre class="out out-full" tabindex="0">{
+  "<span class="k">verdict</span>": "<span class="s">broken</span>",
+  "<span class="k">summary</span>": { "<span class="k">total</span>": <span class="n">7</span>, "<span class="k">breaking</span>": <span class="n">5</span>, "<span class="k">degraded</span>": <span class="n">1</span>, "<span class="k">safe</span>": <span class="n">1</span> },
+  "<span class="k">changes</span>": [
+    { "<span class="k">code</span>": "<span class="s">scope_added</span>",         "<span class="k">direction</span>": "<span class="s">outbound</span>", "<span class="k">severity</span>": "<span class="s">breaking</span>", "<span class="k">target</span>": "<span class="s">charges:read</span>" },
+    { "<span class="k">code</span>": "<span class="s">enum_value_removed</span>",  "<span class="k">direction</span>": "<span class="s">outbound</span>", "<span class="k">severity</span>": "<span class="s">breaking</span>", "<span class="k">target</span>": "<span class="s">currency</span>" },
+    { "<span class="k">code</span>": "<span class="s">field_added</span>",         "<span class="k">direction</span>": "<span class="s">outbound</span>", "<span class="k">severity</span>": "<span class="s">breaking</span>", "<span class="k">target</span>": "<span class="s">statement_descriptor</span>" },
+    { "<span class="k">code</span>": "<span class="s">field_renamed</span>",       "<span class="k">direction</span>": "<span class="s">inbound</span>",  "<span class="k">severity</span>": "<span class="s">breaking</span>", "<span class="k">target</span>": "<span class="s">receipt_url</span>" },
+    { "<span class="k">code</span>": "<span class="s">rate_limit_reduced</span>",  "<span class="k">direction</span>": "<span class="s">outbound</span>", "<span class="k">severity</span>": "<span class="s">breaking</span>", "<span class="k">target</span>": "<span class="s">rateLimit</span>" },
+    { "<span class="k">code</span>": "<span class="s">enum_value_added</span>",    "<span class="k">direction</span>": "<span class="s">inbound</span>",  "<span class="k">severity</span>": "<span class="s">degraded</span>", "<span class="k">target</span>": "<span class="s">status</span>" },
+    { "<span class="k">code</span>": "<span class="s">field_added</span>",         "<span class="k">direction</span>": "<span class="s">inbound</span>",  "<span class="k">severity</span>": "<span class="s">safe</span>",     "<span class="k">target</span>": "<span class="s">network_code</span>" }
+  ],
+  "<span class="k">repairPlan</span>": {
+    "<span class="k">autoApplicable</span>": <span class="n">3</span>, "<span class="k">requiresHuman</span>": <span class="n">3</span>, "<span class="k">fullyAutomatic</span>": false, "<span class="k">minConfidence</span>": <span class="n">20</span>,
+    "<span class="k">steps</span>": [
+      { "<span class="k">order</span>": <span class="n">1</span>, "<span class="k">phase</span>": "<span class="s">auth</span>",            "<span class="k">action</span>": "<span class="s">request_scope</span>",       "<span class="k">confidence</span>": <span class="n">90</span>, "<span class="k">autoApplicable</span>": false },
+      { "<span class="k">order</span>": <span class="n">2</span>, "<span class="k">phase</span>": "<span class="s">outbound_schema</span>", "<span class="k">action</span>": "<span class="s">replace_enum_value</span>",  "<span class="k">confidence</span>": <span class="n">35</span>, "<span class="k">autoApplicable</span>": false },
+      { "<span class="k">order</span>": <span class="n">3</span>, "<span class="k">phase</span>": "<span class="s">outbound_schema</span>", "<span class="k">action</span>": "<span class="s">add_default_value</span>",   "<span class="k">confidence</span>": <span class="n">20</span>, "<span class="k">autoApplicable</span>": false },
+      { "<span class="k">order</span>": <span class="n">4</span>, "<span class="k">phase</span>": "<span class="s">inbound_schema</span>",  "<span class="k">action</span>": "<span class="s">map_renamed_field</span>",   "<span class="k">confidence</span>": <span class="n">95</span>, "<span class="k">autoApplicable</span>": true  },
+      { "<span class="k">order</span>": <span class="n">5</span>, "<span class="k">phase</span>": "<span class="s">inbound_schema</span>",  "<span class="k">action</span>": "<span class="s">handle_unknown_enum</span>", "<span class="k">confidence</span>": <span class="n">85</span>, "<span class="k">autoApplicable</span>": true  },
+      { "<span class="k">order</span>": <span class="n">6</span>, "<span class="k">phase</span>": "<span class="s">throughput</span>",      "<span class="k">action</span>": "<span class="s">add_backoff</span>",         "<span class="k">confidence</span>": <span class="n">95</span>, "<span class="k">autoApplicable</span>": true  }
+    ]
+  },
+  "<span class="k">rateLimit</span>": {
+    "<span class="k">direction</span>": "<span class="s">reduced</span>", "<span class="k">willExceed</span>": true,
+    "<span class="k">permittedInObservedWindow</span>": <span class="n">600</span>, "<span class="k">excessRequests</span>": <span class="n">200</span>, "<span class="k">headroomPct</span>": <span class="n">0</span>,
+    "<span class="k">minIntervalMs</span>": <span class="n">100</span>,
+    "<span class="k">backoff</span>": { "<span class="k">initialDelayMs</span>": <span class="n">100</span>, "<span class="k">multiplier</span>": <span class="n">2</span>, "<span class="k">maxDelayMs</span>": <span class="n">1000</span>, "<span class="k">maxAttempts</span>": <span class="n">5</span> }
+  }
+}</pre>
+    <div class="grid grid-3" style="margin-top:32px">
+      <div class="card">
+        <h3>Three of six steps can run unattended</h3>
+        <p>Reading a renamed field, adding a default branch for an unknown enum value and pacing requests are all mechanical: they cannot lose information, change what you store, or weaken a check. Choosing a <code>statement_descriptor</code> is none of those things, so it gets a human and a confidence of 20.</p>
+      </div>
+      <div class="card">
+        <h3>200 requests over, not “near the limit”</h3>
+        <p>800 observed against a limit that permits 600 in the same window. The excess is a count, the pacing interval is 100ms rounded up, and both come from integer arithmetic on the two rates: no float ever holds a limit.</p>
+      </div>
+      <div class="card">
+        <h3>You supply the snapshots</h3>
+        <p>Integration Recovery does not crawl the provider, replay your traffic, or ask a model what a schema means. You send two observations you already have, and the same pair always produces the same bytes: so the result can be diffed, stored and asserted on in CI.</p>
+      </div>
+    </div>
+    <p class="tier-note" style="margin-top:24px;max-width:760px">This service is newly launched. We publish no uptime percentage, customer count, logo wall or certification claim until we have the operating history to support one. The output is a classification of the two snapshots you supply and a proposed remediation; applying a repair is your decision, and the <code>autoApplicable</code> flag exists so that decision can be made in code.</p>
+  </div>
+</section>
+
+
+<!-- ===== 5 · HOW IT WORKS ============================================== -->
+<section id="how" class="sunken">
+  <div class="wrap">
+    <span class="eyebrow">How it works</span>
+    <h2 style="margin:12px 0 32px">Three calls to put drift detection in your pipeline</h2>
+    <ul class="steps" style="max-width:820px;margin:0 0 48px;padding:0">
+      <li><div><h3>Snapshot the contract</h3><p style="color:var(--ink-2);font-size:15px;margin-top:4px">Turn whatever you have (an OpenAPI file, a recorded response, the provider's docs page) into endpoints, auth, webhooks and a rate limit. Store the result next to your integration code. That stored snapshot is the <code>previous</code> for every later run.</p></div></li>
+      <li><div><h3>Check on every build</h3><p style="color:var(--ink-2);font-size:15px;margin-top:4px">POST the stored snapshot and a fresh one. Fail the build on <code>verdict: "broken"</code>, open a ticket on <code>"degraded"</code>, and do nothing on <code>"compatible"</code>. One unit per integration check, up to 50 in a call.</p></div></li>
+      <li><div><h3>Apply what is safe, route what is not</h3><p style="color:var(--ink-2);font-size:15px;margin-top:4px">Every repair carries <code>autoApplicable</code>, an integer <code>confidence</code> and machine-readable <code>parameters</code>. Apply the mechanical ones in <code>order</code>; send the rest to the person who knows what the field means, with the reason already written.</p></div></li>
+    </ul>
+
+    <span class="eyebrow">Rules the engine never bends</span>
+    <h3 style="margin:12px 0 8px">Direction, and refusing to guess</h3>
+    <ul class="terms read" style="max-width:820px">
+      <li><strong>Direction is structural.</strong> Request fields are outbound, response fields and webhook payloads inbound. There is no flag to get wrong.</li>
+      <li><strong>Missing usage data never lowers a severity.</strong> Without <code>heldScopes</code> a new scope is breaking; without <code>subscribedEvents</code> a withdrawn event is breaking; without <code>observedVolume</code> a reduced limit is degraded, not safe.</li>
+      <li><strong>An omitted section is unobserved, not empty.</strong> If one snapshot lists endpoints and the other omits the key, that section is skipped with a warning. An explicit <code>[]</code> means you looked and found none: and does report every removal.</li>
+      <li><strong>A rename is claimed only when it cannot be wrong.</strong> Ambiguity falls back to a removal plus an addition, which is noisier and never wrong.</li>
+      <li><strong>Rates are compared by integer cross-multiplication.</strong> Permitted volume floors, the pacing interval rounds up. Both fail closed.</li>
+      <li><strong>Sunset dates are whole UTC days.</strong> A deadline that shifts an hour across a DST boundary is a missed deadline.</li>
+      <li><strong>A swapped snapshot pair is refused, not analysed.</strong> Backwards, every classification inverts and nothing downstream could tell.</li>
+      <li><strong>Output is deterministic and nothing is stored.</strong> Same two snapshots, same instant, same bytes.</li>
+    </ul>
+  </div>
+</section>
+
+
+<!-- ===== 6 · DEVELOPER INTEGRATION ===================================== -->
+<section id="api">
+  <div class="wrap">
+    <span class="eyebrow">Developer integration</span>
+    <h2 style="margin:12px 0 8px">Small surface, versioned, OpenAPI-first</h2>
+    <p class="read section-lede" style="margin-bottom:24px">Authenticate with <code>Authorization: Bearer &lt;key&gt;</code>. Every error returns a stable <code>code</code> and a <code>requestId</code> you can quote, and validation failures name the exact field in <code>details.path</code>.</p>
+    <div class="panel"><div class="panel-body">
+      <div class="ep"><span class="m">POST</span><code>/v1/keys</code><span class="d">Public. Emails a one-time claim token to the address you give it. No key is returned on this call, proving the mailbox is what stops anyone minting a key on your account.</span></div>
+      <div class="ep"><span class="m">POST</span><code>/v1/keys/claim</code><span class="d">Public. Spends the emailed token and returns the key, shown once: 200 integration checks a month, no card.</span></div>
+      <div class="ep"><span class="m">POST</span><code>/v1/checks</code><span class="d">One check or up to 50. Billed one unit per integration check.</span></div>
+      <div class="ep"><span class="m">POST</span><code>/v1/demo/check</code><span class="d">Public. Real engine, capped at 5 endpoints and 60 fields. No key required.</span></div>
+      <div class="ep"><span class="m">GET</span><code>/v1/drift-types</code><span class="d">Public. Every drift code and repair action, with its severity in each direction.</span></div>
+    </div></div>
+    <div style="margin-top:24px"><pre class="out" tabindex="0"><span class="k">curl</span> -X POST __API__/v1/checks \
+  -H <span class="s">"Authorization: Bearer $INTEGRATION_RECOVERY_KEY"</span> \
+  -H <span class="s">"content-type: application/json"</span> \
+  -d <span class="s">'{"check":{"integrationId":"acme-payments-prod",
+        "provider":"northwind-payments",
+        "previous":{"endpoints":[{"method":"POST","path":"/v1/charges",
+          "request":[{"path":"amount","type":"integer","required":true}]}]},
+        "current":{"endpoints":[{"method":"POST","path":"/v1/charges",
+          "request":[{"path":"amount","type":"integer","required":true},
+                     {"path":"statement_descriptor","type":"string",
+                      "required":true}]}]}}}'</span></pre></div>
+    <div class="cta-row" style="margin-top:24px">
+      <a class="btn btn-primary" href="/docs" data-ev="docs_click">Read the API reference</a>
+      <a class="btn btn-secondary" href="__API__/openapi.json">OpenAPI specification</a>
+    </div>
+    <p class="links-inline">
+      <span>Python and TypeScript SDKs</span>
+      <span>Service health: <a href="__API__/health">__API__/health</a></span>
+    </p>
+  </div>
+</section>
+
+
+<!-- ===== 7 · PRICING =================================================== -->
+<section id="pricing" class="sunken">
+  <div class="wrap-cm">
+    <span class="eyebrow">Pricing</span>
+    <h2 style="margin:12px 0 8px">Priced per integration check, capped so a CI loop can’t surprise you</h2>
+    <p class="read section-lede" style="margin-bottom:32px">One unit is one integration checked: two snapshots compared, however many endpoints, webhooks and fields they describe. Every plan includes an allowance, then a per-unit overage that is hard-capped per billing period: your worst-case bill is the base price plus the cap, never more.</p>
+    <!--PRICING_TIERS-->
+    <p class="tier-note" style="margin-top:24px">Free tier: 200 integration checks per month, no card. Prices in USD, billed monthly. Payment is processed by Square through our shared billing platform; card details never touch this site.</p>
+    <div class="read" style="margin-top:32px">
+      <details class="faq"><summary>What counts as an integration check?</summary><div class="body">One pair of snapshots compared, in one call. A check covering forty endpoints and a hundred fields is one unit; a batch of fifty checks is fifty. A request rejected by validation or by quota costs nothing: the whole batch is reserved before any comparison runs, so an over-quota call is refused rather than half-served.</div></details>
+      <details class="faq"><summary>Does it call the provider, or read my code?</summary><div class="body">Neither. You send two observations you already hold: generated from an OpenAPI file, a recorded response, or the provider's documentation. The service makes no outbound requests and has no access to your repository or your traffic. Every endpoint is stateless: nothing about your integrations is retained.</div></details>
+      <details class="faq"><summary>Why is a field added to a response not breaking?</summary><div class="body">Because your client does not have to send it, and a JSON reader ignores keys it does not know. The same field added as <em>required</em> to a request is a rejected call on every request you make. The direction determines the answer, and it is structural: request fields go under <code>request</code>, response fields under <code>response</code>. That single distinction is what separates a usable report from a wall of noise.</div></details>
+      <details class="faq"><summary>Are the repairs applied for me?</summary><div class="body">No. Each repair is machine-readable: an action, ordered <code>parameters</code>, an integer confidence and an <code>autoApplicable</code> flag: so your own tooling can apply the mechanical ones. <code>autoApplicable</code> is true only when applying the step cannot lose information, cannot change what your system stores, and cannot weaken a security check. A signature-scheme change is never auto-applicable, however confident the diagnosis, because a verifier wrong in the permissive direction accepts forgeries.</div></details>
+      <details class="faq"><summary>What happens if I don't send <code>usage</code>?</summary><div class="body">You still get every change classified, but nothing gets ruled out. Without <code>heldScopes</code> a newly required scope stays breaking; without <code>subscribedEvents</code> a withdrawn webhook event stays breaking; without <code>observedVolume</code> a reduced rate limit is reported as degraded rather than safe. Each of those adds a warning naming the field that would have settled it. Missing data never buys a lower severity.</div></details>
+      <details class="faq"><summary>Can I evaluate it before paying?</summary><div class="body">Yes. The demo at the top of this page is the real engine with no key at all, capped at five endpoints and sixty fields. The free tier is 200 integration checks a month against the full authenticated surface, with no card.</div></details>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 8 · CTA ======================================================= -->
+<section id="get-key">
+  <div class="wrap" style="text-align:center">
+    <h2 style="margin-bottom:12px">Find the break before your provider ships it.</h2>
+    <p class="section-lede" style="max-width:620px;margin:0 auto 24px">The free tier is 200 integration checks a month, no card. Create a key, post two snapshots, and the response tells you which changes break you and in what order to fix them.</p>
+    <div class="cta-row" style="justify-content:center">
+      <a class="btn btn-primary" href="/signup" data-ev="final_cta">Get Free API Key</a>
+      <a class="btn btn-secondary" href="#try">Run the live demo</a>
+    </div>
+    <p class="hint" style="max-width:620px;margin:20px auto 0">One email address, no password, no card. Prefer the terminal? The same key, in two calls:</p>
+    <div style="max-width:620px;margin:16px auto 0;text-align:left"><pre class="out" tabindex="0"><span class="k">curl</span> -X POST __API__/v1/keys \
+  -H <span class="s">"content-type: application/json"</span> \
+  -d <span class="s">'{"email":"you@company.com","name":"Evaluation key","source":{"source":"web","medium":"landing"}}'</span>
+
+# 202 Accepted. A one-time token is emailed to that address — spend it,
+# and the response carries the key, shown once.
+
+<span class="k">curl</span> -X POST __API__/v1/keys/claim \
+  -H <span class="s">"content-type: application/json"</span> \
+  -d <span class="s">'{"token":"&lt;token from the email&gt;"}'</span></pre></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <a class="brand" href="/" style="margin-bottom:8px"><span class="dot"></span>Integration Recovery</a>
+        <p style="color:var(--ink-3);font-size:14px;max-width:320px">Auth, schema, webhook and rate-limit drift in third-party integrations, classified by direction and answered with an ordered repair plan.</p>
+      </div>
+      <div><strong style="font-size:14px">Product</strong><a href="/#problem">The problem</a><a href="/#solution">What it computes</a><a href="/#example">Example output</a><a href="/#pricing">Pricing</a></div>
+      <div><strong style="font-size:14px">Developers</strong><a href="/docs" data-ev="docs_click">API reference</a><a href="/quickstart">Quickstart</a><a href="/playground">Playground</a><a href="__API__/openapi.json">OpenAPI specification</a><a href="/downloads/integration_recovery.py">Python SDK</a><a href="/downloads/integration_recovery.ts">TypeScript SDK</a><a href="/downloads/postman_collection.json">Postman collection</a><a href="/changelog">Changelog</a></div>
+      <div><strong style="font-size:14px">Company</strong><a href="/status">Service status</a><a href="__API__/health">API health</a><a href="mailto:__CONTACT__">Support</a><a href="mailto:__CONTACT__">Sales</a><a href="/privacy">Privacy policy</a><a href="/terms">Terms of service</a></div>
+    </div>
+    <div class="legal">© 2026 · Payments processed by Square. Prices in USD.</div>
+  </div>
+</footer>
+
+<script>
+const API = "__API__";
+const EP  = "/v1/demo/check";
+const DEFAULT_IN = document.getElementById('demo-in').value;
+const track = (n, d) => { try { (window.__ev ||= []).push({ n, d, t: Date.now(), ref: document.referrer, q: location.search }); } catch {} };
+document.querySelectorAll('[data-ev]').forEach(el => el.addEventListener('click', () => track(el.dataset.ev, el.dataset.tier || null)));
+track('landing_view');
+
+/* FIRST-TOUCH FORWARDING.
+   The API is a different service on the same origin, so a click from here to
+   /signup arrives with a SAME-ORIGIN referer: the external referrer that
+   actually did the acquiring is gone, and the server records `/signup` as the
+   landing page rather than this one. Neither fact is recoverable later, so
+   carry them on the link. `ref` is a host, `lp` is a path; the server reduces
+   both again and drops anything that does not fit, so this cannot introduce a
+   value the column could not already hold. Nothing is stored in the browser. */
+(() => { try {
+  const q = new URLSearchParams(location.search), p = new URLSearchParams();
+  for (const k of ['utm_source','utm_medium','utm_campaign','utm_content']) {
+    const v = q.get(k); if (v) p.set(k, v);
+  }
+  let ref = ''; try { ref = document.referrer ? new URL(document.referrer).host : ''; } catch {}
+  if (ref && ref !== location.host) p.set('ref', ref);
+  p.set('lp', location.pathname);
+  for (const a of document.querySelectorAll('a[href^="/signup"]')) {
+    const u = new URL(a.getAttribute('href'), location.origin);
+    p.forEach((v, k) => { if (!u.searchParams.has(k)) u.searchParams.set(k, v); });
+    a.setAttribute('href', u.pathname + u.search + u.hash);
+  }
+} catch {} })();
+
+const $in = document.getElementById('demo-in'), $out = document.getElementById('demo-out'),
+      $run = document.getElementById('demo-run'), $st = document.getElementById('demo-status');
+const setStatus = (txt, cls) => { $st.textContent = txt; $st.className = 'chip ' + cls; };
+const paint = (obj) => {
+  const j = JSON.stringify(obj, null, 2)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/"([^"]+)":/g, '"<span class="k">$1</span>":')
+    .replace(/: "([^"]*)"/g, ': "<span class="s">$1</span>"')
+    .replace(/: (-?\d+(\.\d+)?)/g, ': <span class="n">$1</span>');
+  $out.innerHTML = j;
+};
+document.getElementById('demo-reset').addEventListener('click', () => {
+  $in.value = DEFAULT_IN; $out.textContent = 'Press “Check this integration” to call the live API.'; setStatus('Ready','chip-info');
+});
+$run.addEventListener('click', async () => {
+  let payload;
+  try { payload = JSON.parse($in.value); }
+  catch (e) { setStatus('Invalid JSON','chip-crit'); $out.textContent = 'That is not valid JSON:\n\n' + e.message; return; }
+  $run.disabled = true; setStatus('Running…','chip-info'); $out.textContent = 'Calling ' + API + EP + ' …';
+  const started = performance.now();
+  try {
+    const res = await fetch(API + EP, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    const body = await res.json();
+    paint(body);
+    const ms = Math.round(performance.now() - started);
+    if (res.ok) {
+      const check = body && body.check ? body.check : null;
+      const verdict = check ? check.verdict : 'unknown';
+      const breaking = check && check.summary ? check.summary.breaking : 0;
+      const cls = verdict === 'broken' ? 'chip-crit' : verdict === 'degraded' ? 'chip-warn' : 'chip-ok';
+      setStatus(verdict + ' · ' + breaking + ' breaking · ' + ms + ' ms', cls);
+      track('demo_result_ok', verdict);
+    } else { setStatus(res.status + ' · ' + (body?.error?.code ?? 'error'),'chip-warn'); track('demo_result_error'); }
+  } catch (err) {
+    setStatus('Network error','chip-crit');
+    $out.textContent = 'Could not reach the API.\n\n' + String(err) + '\n\nThe service may be restarting — try again in a moment.';
+  } finally { $run.disabled = false; }
+});
+// --- Pricing CTA -> shared billing platform -------------------------------
+// Posts to the API's /v1/checkout, which calls @sp/commerce's provider-agnostic
+// createCheckout and returns a Square-hosted URL. No Square logic lives here,
+// and no card details ever touch this page (24_SHARED_SQUARE_BILLING_HUB.md).
+document.querySelectorAll('[data-ev="pricing_cta"]').forEach(el => {
+  el.addEventListener('click', async (e) => {
+    const tier = el.dataset.tier;
+    if (!tier || tier === 'enterprise') return; // enterprise is a sales conversation
+    e.preventDefault();
+    const original = el.textContent;
+    el.textContent = 'Starting checkout…';
+    el.setAttribute('aria-disabled', 'true');
+    track('checkout_start', tier);
+    try {
+      const res = await fetch(API + '/v1/checkout', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      });
+      const body = await res.json();
+      if (res.ok && body.checkoutUrl) { track('checkout_redirect', tier); location.href = body.checkoutUrl; return; }
+      alert(body?.error?.message ?? 'Checkout is unavailable right now. Please try again shortly.');
+    } catch {
+      alert('Could not reach the checkout service. Please try again shortly.');
+    } finally {
+      el.textContent = original;
+      el.removeAttribute('aria-disabled');
+    }
+  });
+});
+</script>
+</body>
+</html>

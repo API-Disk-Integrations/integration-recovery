@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Schema Drift Detection and Repair | Integration Recovery</title>
+<meta name="description" content="Compare prior and current third-party API observations, identify breaking request and response drift, and receive a machine-readable repair plan in dependency order.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2319651F'/></svg>">
+<style>:root{--brand-50:#ECF6ED;--brand-300:#91D497;--brand-600:#1E7725;--brand-700:#19651F;--brand-800:#145019;--brand-900:#0F3B13;--accent:#95258B;}</style>
+<link rel="stylesheet" href="/base.css">
+<style>
+.intent-hero{padding-block:var(--s8)}.intent-hero .lede,.intent-lede{color:var(--ink-2);font-size:var(--t-md)}.intent-hero .lede{margin:var(--s4) 0 var(--s5)}
+.intent-grid{display:grid;gap:var(--s4)}.intent-grid>*{min-width:0}.intent-card strong{display:block;margin-bottom:var(--s2)}.intent-card p{color:var(--ink-2)}
+.intent-demo{display:grid;gap:var(--s5);align-items:start}.intent-demo>*{min-width:0}.intent-demo textarea{min-height:520px;max-height:780px}
+.intent-actions{display:flex;flex-wrap:wrap;gap:var(--s3);margin-top:var(--s3)}.intent-list{margin:var(--s4) 0 0;padding-left:1.25rem;color:var(--ink-2)}.intent-list li+li{margin-top:var(--s2)}
+.intent-boundary{border-left:4px solid var(--brand-600)}.intent-code{display:block;position:relative}.intent-code pre{white-space:pre-wrap;overflow-wrap:anywhere;padding-right:6.5rem}
+.copy-button{position:absolute;right:var(--s3);top:var(--s3)}.result-grid{display:grid;gap:var(--s4)}.muted{color:var(--ink-2)}
+@media(min-width:760px){.intent-grid,.result-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.intent-demo{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}}
+</style>
+</head>
+<body data-product-id="integration-recovery" data-page-path="/use-cases/api-schema-drift-detection-and-repair">
+<a class="btn btn-secondary" href="#main" style="position:absolute;left:-9999px" onfocus="this.style.left='8px';this.style.top='8px';this.style.position='fixed';this.style.zIndex='99'">Skip to content</a>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/"><span class="dot"></span>Integration Recovery</a>
+  <nav aria-label="Primary"><a href="#fit" class="nav-hide">Use case</a><a href="#quickstart" class="nav-hide">Quickstart</a><a href="#trust" class="nav-hide">Trust</a><a href="/docs">Docs</a><a class="btn btn-primary" style="min-height:36px;font-size:14px" href="#demo">Run demo</a></nav>
+</div></header>
+
+<main id="main">
+<section class="intent-hero"><div class="wrap">
+  <p class="eyebrow">API schema drift detection and repair</p>
+  <h1 style="margin-top:var(--s3);max-width:920px">Turn a third-party API change into an ordered integration repair plan</h1>
+  <p class="lede read">For integration engineers, platform teams, and SREs maintaining third-party APIs. Compare what your client previously expected with a current observation; receive breaking, degraded, or safe changes and the exact order in which to repair them.</p>
+  <div class="cta-row"><a class="btn btn-primary" href="#demo">Run the no-account demo</a><a class="btn btn-secondary" href="/signup" data-signup>Create a sandbox key</a></div>
+  <div class="hero-meta"><span><b>Directional comparison</b></span><span><b>No API key</b> for demo</span><span><b>No autonomous code changes</b></span></div>
+</div></section>
+
+<section id="fit" class="sunken"><div class="wrap">
+  <p class="eyebrow">Who this is for and when to use it</p>
+  <h2 style="margin:var(--s3) 0 var(--s5);max-width:840px">A payment provider made a request field mandatory and renamed a response field; existing calls now fail or deserialize incorrectly.</h2>
+  <div class="intent-grid">
+    <article class="card intent-card"><strong>Best-fit team</strong><p>Engineers responsible for external API clients, connectors, webhooks, or provider upgrades where contract drift can break production workflows.</p></article>
+    <article class="card intent-card"><strong>Input</strong><p>Your prior and current observations, including endpoint direction and flattened request/response fields. The service does not crawl or infer a provider contract for you.</p></article>
+    <article class="card intent-card"><strong>Output</strong><p>A verdict, breaking-change summary, directional change records, and repair steps ordered across auth, routing, outbound schema, inbound schema, webhook, and throughput phases.</p></article>
+    <article class="card intent-card"><strong>Primary-value event</strong><p>A successful authenticated <code>POST /v1/checks</code> returning drift classification and a machine-readable repair plan.</p></article>
+  </div>
+</div></section>
+
+<section id="demo"><div class="wrap">
+  <p class="eyebrow">Interactive keyless demo</p>
+  <h2 style="margin:var(--s3) 0 var(--s4)">Compare one fictional endpoint before and after drift</h2>
+  <p class="intent-lede read">The example uses invented provider observations, runs the production comparison and repair engine, stores nothing, and consumes no account quota. Do not paste API credentials, captured customer payloads, or personal data.</p>
+  <div class="intent-demo" style="margin-top:var(--s5)">
+    <form class="panel" id="demo-form">
+      <div class="panel-head"><span class="label">Request body</span><span class="chip chip-info" id="demo-status" role="status" aria-live="polite">Ready</span></div>
+      <div class="panel-body">
+        <label class="field" for="demo-in">JSON input</label>
+        <textarea id="demo-in" rows="25" spellcheck="false" aria-describedby="demo-help">{
+  &quot;check&quot;: {
+    &quot;integrationId&quot;: &quot;acme-payments-prod&quot;,
+    &quot;provider&quot;: &quot;northwind-payments&quot;,
+    &quot;previous&quot;: {
+      &quot;capturedAt&quot;: &quot;2026-05-01T00:00:00Z&quot;,
+      &quot;endpoints&quot;: [{
+        &quot;method&quot;: &quot;POST&quot;,
+        &quot;path&quot;: &quot;/v1/charges&quot;,
+        &quot;request&quot;: [{
+          &quot;path&quot;: &quot;amount&quot;,
+          &quot;type&quot;: &quot;integer&quot;,
+          &quot;required&quot;: true
+        }],
+        &quot;response&quot;: [{
+          &quot;path&quot;: &quot;receipt_url&quot;,
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;required&quot;: true
+        }]
+      }]
+    },
+    &quot;current&quot;: {
+      &quot;capturedAt&quot;: &quot;2026-08-01T00:00:00Z&quot;,
+      &quot;endpoints&quot;: [{
+        &quot;method&quot;: &quot;POST&quot;,
+        &quot;path&quot;: &quot;/v1/charges&quot;,
+        &quot;request&quot;: [
+          {&quot;path&quot;:&quot;amount&quot;,&quot;type&quot;:&quot;integer&quot;,&quot;required&quot;:true},
+          {&quot;path&quot;:&quot;statement_descriptor&quot;,&quot;type&quot;:&quot;string&quot;,&quot;required&quot;:true}
+        ],
+        &quot;response&quot;: [{
+          &quot;path&quot;: &quot;receiptUrl&quot;,
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;required&quot;: true
+        }]
+      }]
+    }
+  }
+}</textarea>
+        <p class="hint" id="demo-help">Schema source: the independently accepted Integration Recovery runtime example for <code>/v1/demo/check</code>. Previous must precede current when both use <code>capturedAt</code>.</p>
+        <div class="intent-actions"><button class="btn btn-primary" type="submit" id="demo-run">Check drift</button><button class="btn btn-secondary" type="button" id="demo-reset">Reset</button></div>
+      </div>
+    </form>
+    <div class="panel">
+      <div class="panel-head"><span class="label">Live response</span></div>
+      <div class="panel-body"><pre class="out" id="demo-out" aria-live="polite" tabindex="0">Run the demo to see the unedited API response.</pre>
+      <p class="hint">Look first at <code>verdict</code> and <code>summary.breaking</code>, then apply <code>repairPlan.steps</code> in ascending <code>order</code>. A demo call is evaluation, not a deployed connector or repaired production integration.</p></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="quickstart" class="sunken"><div class="wrap">
+  <p class="eyebrow">Copyable no-account path</p>
+  <h2 style="margin:var(--s3) 0 var(--s4)">Run the same check from a terminal</h2>
+  <p class="read muted">This block runs as written with <code>curl</code>. It contains only fictional API observations and no placeholder credential.</p>
+  <div class="panel intent-code" style="margin-top:var(--s4)"><button class="btn btn-secondary copy-button" type="button" data-copy-target="noauth-curl">Copy curl</button><pre class="out"><code id="noauth-curl">curl -sS -X POST https://integrationrecovery-api.com/v1/demo/check \
+  -H 'content-type: application/json' \
+  -d '{"check":{"integrationId":"acme-payments-prod","provider":"northwind-payments","previous":{"capturedAt":"2026-05-01T00:00:00Z","endpoints":[{"method":"POST","path":"/v1/charges","request":[{"path":"amount","type":"integer","required":true}],"response":[{"path":"receipt_url","type":"string","required":true}]}]},"current":{"capturedAt":"2026-08-01T00:00:00Z","endpoints":[{"method":"POST","path":"/v1/charges","request":[{"path":"amount","type":"integer","required":true},{"path":"statement_descriptor","type":"string","required":true}],"response":[{"path":"receiptUrl","type":"string","required":true}]}]}}}'</code></pre></div>
+</div></section>
+
+<section id="expected"><div class="wrap">
+  <p class="eyebrow">Expected contract-shaped result</p>
+  <h2 style="margin:var(--s3) 0 var(--s4)">What first useful value looks like</h2>
+  <div class="result-grid">
+    <div class="panel"><div class="panel-head"><span class="label">Representative response</span></div><div class="panel-body"><pre class="out"><code>{
+  "check": {
+    "integrationId": "acme-payments-prod",
+    "verdict": "broken",
+    "summary": {"total": 2, "breaking": 2, "degraded": 0, "safe": 0},
+    "changes": [
+      {"code": "field_added", "surface": "request", "target": "statement_descriptor", "breaking": true},
+      {"code": "field_renamed", "surface": "response", "target": "receipt_url", "to": "receiptUrl", "breaking": true}
+    ],
+    "repairPlan": {
+      "steps": [
+        {"change": 0, "action": "add_default_value", "phase": "outbound_schema", "order": 1, "target": "statement_descriptor", "confidence": 20, "autoApplicable": false},
+        {"change": 1, "action": "map_renamed_field", "phase": "inbound_schema", "order": 2, "target": "receipt_url", "confidence": 95, "autoApplicable": true}
+      ],
+      "autoApplicable": 1,
+      "requiresHuman": 1,
+      "fullyAutomatic": false
+    }
+  },
+  "requestId": "req_example"
+}</code></pre><p class="hint">Request IDs can vary. The verdict, change direction, repair action, phase, order, confidence, and automation fields are the runtime result shape used by this example.</p></div></div>
+    <article class="card intent-card"><strong>First useful result</strong><p><code>verdict: broken</code> shows that the integration is unsafe to run unchanged. The first repair adds a required outbound field and needs a human-supplied value; the second maps a renamed inbound field and is mechanically applicable.</p><strong style="margin-top:var(--s4)">Interpretation</strong><p><code>autoApplicable</code> describes whether a step can be applied without an information-losing guess. It is not permission for this API to edit or deploy your integration.</p></article>
+  </div>
+</div></section>
+
+<section id="auth" class="sunken"><div class="wrap">
+  <p class="eyebrow">Authenticated first-value path</p>
+  <h2 style="margin:var(--s3) 0 var(--s4)">Verify the account, claim the key once, then run the metered check</h2>
+  <ol class="steps read">
+    <li><div><strong>Request a product-scoped key.</strong><p class="hint">Replace only <code>you@example.com</code>. The source tuple identifies this exact-intent page; upstream UTM values are also carried by the signup CTA.</p></div></li>
+    <li><div><strong>Open the verification email and claim its one-time token.</strong><p class="hint">Replace only <code>PASTE_ONE_TIME_TOKEN_FROM_EMAIL</code>; capture the API key from the claim response.</p></div></li>
+    <li><div><strong>Call <code>/v1/checks</code> with the bearer key.</strong><p class="hint">A successful verdict and repair-plan response is the primary-value event. Key issuance by itself is not activation.</p></div></li>
+  </ol>
+  <div class="panel intent-code" style="margin-top:var(--s5)"><button class="btn btn-secondary copy-button" type="button" data-copy-target="auth-curl">Copy commands</button><pre class="out"><code id="auth-curl">curl -sS -X POST https://integrationrecovery-api.com/v1/keys \
+  -H 'content-type: application/json' \
+  -d '{"email":"you@example.com","source":{"source":"product_site","medium":"exact_intent","campaign":"search-integration-recovery-exact-intent-v1","content":"api-schema-drift-detection-and-repair-v1"}}'
+
+curl -sS -X POST https://integrationrecovery-api.com/v1/keys/claim \
+  -H 'content-type: application/json' \
+  -d '{"token":"PASTE_ONE_TIME_TOKEN_FROM_EMAIL"}'
+
+export KEY='PASTE_API_KEY_FROM_CLAIM_RESPONSE'
+
+curl -sS -X POST https://integrationrecovery-api.com/v1/checks \
+  -H "Authorization: Bearer $KEY" \
+  -H 'content-type: application/json' \
+  -d '{"check":{"integrationId":"acme-payments-prod","provider":"northwind-payments","previous":{"capturedAt":"2026-05-01T00:00:00Z","endpoints":[{"method":"POST","path":"/v1/charges","request":[{"path":"amount","type":"integer","required":true}],"response":[{"path":"receipt_url","type":"string","required":true}]}]},"current":{"capturedAt":"2026-08-01T00:00:00Z","endpoints":[{"method":"POST","path":"/v1/charges","request":[{"path":"amount","type":"integer","required":true},{"path":"statement_descriptor","type":"string","required":true}],"response":[{"path":"receiptUrl","type":"string","required":true}]}]}}}'</code></pre></div>
+</div></section>
+
+<section id="next"><div class="wrap">
+  <p class="eyebrow">After the example works</p>
+  <h2 style="margin:var(--s3) 0 var(--s4)">Add one observable contract comparison to an existing integration workflow</h2>
+  <ol class="steps read">
+    <li><div><strong>Capture one provider surface twice.</strong><p class="hint">Preserve direction: request fields are outbound; response and webhook fields are inbound. Timestamp the prior and current observation.</p></div></li>
+    <li><div><strong>Route repair steps by phase and automation flag.</strong><p class="hint">Apply in ascending <code>order</code>. Send any <code>autoApplicable: false</code> step to an engineer with its change evidence and confidence.</p></div></li>
+    <li><div><strong>Re-run the comparison after the reviewed change.</strong><p class="hint">Your source control, tests, deployment, and rollback stay authoritative. The API produces a plan; it does not edit code or deploy repairs.</p></div></li>
+  </ol>
+</div></section>
+
+<section id="errors" class="sunken"><div class="wrap">
+  <p class="eyebrow">Troubleshooting</p>
+  <h2 style="margin:var(--s3) 0 var(--s5)">The three most likely blockers</h2>
+  <div class="intent-grid">
+    <article class="card intent-card"><strong><code>401</code> unauthorized</strong><p>Use the API key returned once by <code>/v1/keys/claim</code>, not the email claim token. Send it exactly as <code>Authorization: Bearer $KEY</code>.</p></article>
+    <article class="card intent-card"><strong><code>400 invalid_request</code> or client-side <code>422</code></strong><p>Send exactly one <code>check</code> or a non-empty <code>checks</code> array. Every check needs <code>integrationId</code>, <code>provider</code>, <code>previous</code>, and <code>current</code>; field observations need <code>path</code>, <code>type</code>, and <code>required</code>.</p></article>
+    <article class="card intent-card"><strong><code>429</code> rate limited</strong><p>Read <code>Retry-After</code> when present, wait, then retry with bounded exponential backoff. Keep one stable integration identifier per logical integration.</p></article>
+    <article class="card intent-card"><strong>Need support?</strong><p>Record the stable <code>error.code</code> and request ID. Share the request ID only—never a key, claim token, provider credential, or captured customer payload.</p></article>
+  </div>
+</div></section>
+
+<section id="trust"><div class="wrap">
+  <p class="eyebrow">Trust, privacy, and limits</p>
+  <h2 style="margin:var(--s3) 0 var(--s5)">A repair plan is an explainable recommendation, not an autonomous production change</h2>
+  <article class="card intent-boundary read"><p>The keyless demo processes the supplied payload without storing or metering it. Authenticated use is governed by the <a href="/privacy">privacy policy</a> and <a href="/terms">terms</a>. Submit contract observations, not API keys, bearer tokens, raw customer payloads, or provider secrets.</p></article>
+  <ul class="intent-list read">
+    <li>The API does not fetch provider documentation, replay failed deliveries, modify code, execute a repair, or deploy an integration.</li>
+    <li>The direct HTTP example is supported against the deployed comparison engine. Generated or certified connector use remains held until Development reconciles the broader OpenAPI and SDK request/response details documented in the accepted source overlay.</li>
+    <li>No customer or revenue result is claimed. A live page, demo run, marketplace listing, signup, key, or synthetic test is not commercial validation.</li>
+  </ul>
+  <div class="cta-row" style="margin-top:var(--s6)"><a class="btn btn-primary" href="/signup" data-signup>Create a sandbox key</a><a class="btn btn-secondary" href="/docs">Read the API reference</a></div>
+</div></section>
+</main>
+
+<footer class="site"><div class="wrap"><div class="cols">
+  <div><a class="brand" href="/" style="margin-bottom:8px"><span class="dot"></span>Integration Recovery</a><p style="color:var(--ink-3);font-size:14px;max-width:320px">Compare supplied prior and current API observations, classify directional drift, and return an ordered, machine-readable repair plan.</p></div>
+  <div><strong style="font-size:14px">Product</strong><a href="/">Overview</a><a href="#fit">Use case</a><a href="/#pricing">Pricing</a></div>
+  <div><strong style="font-size:14px">Developers</strong><a href="/docs">API reference</a><a href="/quickstart">Quickstart</a><a href="/playground">Playground</a><a href="__API__/openapi.json">OpenAPI specification</a></div>
+  <div><strong style="font-size:14px">Trust</strong><a href="/status">Service status</a><a href="/privacy">Privacy policy</a><a href="/terms">Terms of service</a><a href="mailto:__CONTACT__">Support</a></div>
+</div><div class="legal">© 2026 · Payments processed by Square. Prices in USD.</div></div></footer>
+
+<script>
+const API = "__API__";
+const ENDPOINT = "/v1/demo/check";
+const PAGE_PATH = "/use-cases/api-schema-drift-detection-and-repair";
+const DEFAULT_ATTRIBUTION = {
+  utm_source: "product_site",
+  utm_medium: "exact_intent",
+  utm_campaign: "search-integration-recovery-exact-intent-v1",
+  utm_content: "api-schema-drift-detection-and-repair-v1"
+};
+const input = document.getElementById("demo-in");
+const DEFAULT_INPUT = input.value;
+const output = document.getElementById("demo-out");
+const button = document.getElementById("demo-run");
+const status = document.getElementById("demo-status");
+function setStatus(label,className){status.textContent=label;status.className="chip "+className}
+function googleHost(host){return /^(?:www\.)?google\.(?:com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$/i.test(host)}
+(function carryAttribution(){
+  try{
+    const incoming=new URLSearchParams(location.search);const carried=new URLSearchParams();
+    for(const name of Object.keys(DEFAULT_ATTRIBUTION)){const value=incoming.get(name);if(value)carried.set(name,value)}
+    let referrerHost="";try{referrerHost=document.referrer?new URL(document.referrer).host:""}catch{}
+    if(!carried.has("utm_source")&&googleHost(referrerHost)){carried.set("utm_source","google_organic");carried.set("utm_medium","organic")}
+    for(const [name,value] of Object.entries(DEFAULT_ATTRIBUTION)){if(!carried.has(name))carried.set(name,value)}
+    if(referrerHost&&referrerHost!==location.host)carried.set("ref",referrerHost);
+    carried.set("lp",PAGE_PATH);
+    for(const link of document.querySelectorAll("a[data-signup]")){const target=new URL(link.getAttribute("href"),location.origin);carried.forEach((value,name)=>target.searchParams.set(name,value));link.setAttribute("href",target.pathname+target.search+target.hash)}
+  }catch{}
+})();
+document.getElementById("demo-reset").addEventListener("click",()=>{input.value=DEFAULT_INPUT;output.textContent="Run the demo to see the unedited API response.";setStatus("Ready","chip-info")});
+document.getElementById("demo-form").addEventListener("submit",async(event)=>{
+  event.preventDefault();let body;
+  try{body=JSON.parse(input.value)}catch(error){setStatus("Invalid JSON","chip-crit");output.textContent="The request body is not valid JSON.\n\n"+String(error);input.focus();return}
+  button.disabled=true;setStatus("Running…","chip-info");output.textContent="Calling "+ENDPOINT+" …";const started=performance.now();
+  try{const response=await fetch(API+ENDPOINT,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});const raw=await response.text();let parsed;try{parsed=JSON.parse(raw)}catch{parsed=raw}output.textContent=typeof parsed==="string"?parsed:JSON.stringify(parsed,null,2);setStatus(response.status+" · "+Math.round(performance.now()-started)+" ms",response.ok?"chip-ok":"chip-warn")}
+  catch(error){setStatus("Network error","chip-crit");output.textContent="Could not reach the API.\n\n"+String(error)}
+  finally{button.disabled=false}
+});
+for(const copy of document.querySelectorAll("[data-copy-target]")){copy.addEventListener("click",async()=>{const target=document.getElementById(copy.dataset.copyTarget);try{await navigator.clipboard.writeText(target.textContent);const old=copy.textContent;copy.textContent="Copied";setTimeout(()=>copy.textContent=old,1600)}catch{copy.textContent="Select and copy"}})}
+</script>
+</body>
+</html>
