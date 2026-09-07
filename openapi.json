@@ -78,18 +78,44 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": [
+                    "count",
+                    "breaking",
+                    "checks",
+                    "requestId"
+                  ],
+                  "additionalProperties": false,
                   "properties": {
                     "count": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 50
                     },
                     "breaking": {
                       "type": "integer",
+                      "minimum": 0,
+                      "maximum": 50,
                       "description": "How many of the checks came back with verdict \"broken\"."
                     },
                     "checks": {
                       "type": "array",
+                      "minItems": 1,
+                      "maxItems": 50,
                       "items": {
                         "type": "object",
+                        "required": [
+                          "integrationId",
+                          "provider",
+                          "verdict",
+                          "summary",
+                          "changes",
+                          "repairPlan",
+                          "rateLimit",
+                          "sunsets",
+                          "evaluatedAt",
+                          "warnings"
+                        ],
+                        "additionalProperties": false,
                         "properties": {
                           "integrationId": {
                             "type": "string"
@@ -107,12 +133,67 @@
                           },
                           "summary": {
                             "type": "object",
-                            "description": "Totals by severity, plus counts by code and by surface."
+                            "required": [
+                              "total",
+                              "breaking",
+                              "degraded",
+                              "safe",
+                              "byCode",
+                              "bySurface"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "total": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "breaking": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "degraded": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "safe": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "byCode": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "description": "A map whose keys are emitted drift codes or surfaces and whose values are occurrence counts."
+                              },
+                              "bySurface": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "description": "A map whose keys are emitted drift codes or surfaces and whose values are occurrence counts."
+                              }
+                            }
                           },
                           "changes": {
                             "type": "array",
                             "items": {
                               "type": "object",
+                              "required": [
+                                "code",
+                                "surface",
+                                "direction",
+                                "target",
+                                "container",
+                                "breaking",
+                                "severity",
+                                "from",
+                                "to",
+                                "detail"
+                              ],
+                              "additionalProperties": false,
                               "properties": {
                                 "code": {
                                   "type": "string",
@@ -143,7 +224,10 @@
                                   "description": "The field path, scope, event name or endpoint the change lands on."
                                 },
                                 "container": {
-                                  "type": "string",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
                                   "description": "An endpoint label like \"POST /v2/orders\", a webhook event name, or null for auth and rate limits."
                                 },
                                 "breaking": {
@@ -159,10 +243,16 @@
                                   ]
                                 },
                                 "from": {
-                                  "type": "string"
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
                                 },
                                 "to": {
-                                  "type": "string"
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
                                 },
                                 "detail": {
                                   "type": "string",
@@ -174,15 +264,38 @@
                           },
                           "repairPlan": {
                             "type": "object",
+                            "required": [
+                              "steps",
+                              "autoApplicable",
+                              "requiresHuman",
+                              "fullyAutomatic",
+                              "minConfidence"
+                            ],
+                            "additionalProperties": false,
                             "description": "The ordered remediation. One step per breaking or degraded change; safe changes get none.",
                             "properties": {
                               "steps": {
                                 "type": "array",
                                 "items": {
                                   "type": "object",
+                                  "required": [
+                                    "change",
+                                    "action",
+                                    "phase",
+                                    "order",
+                                    "target",
+                                    "container",
+                                    "confidence",
+                                    "autoApplicable",
+                                    "requiresHuman",
+                                    "parameters",
+                                    "detail"
+                                  ],
+                                  "additionalProperties": false,
                                   "properties": {
                                     "change": {
                                       "type": "integer",
+                                      "minimum": 0,
                                       "description": "Index into `changes` of the drift this repairs."
                                     },
                                     "action": {
@@ -202,13 +315,17 @@
                                     },
                                     "order": {
                                       "type": "integer",
+                                      "minimum": 1,
                                       "description": "1-based. Apply in ascending order: auth before routing before schemas before throughput."
                                     },
                                     "target": {
                                       "type": "string"
                                     },
                                     "container": {
-                                      "type": "string"
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
                                     },
                                     "confidence": {
                                       "type": "integer",
@@ -221,12 +338,207 @@
                                       "description": "True only when applying it mechanically cannot lose information, change what you store, or weaken a security check. A repair can be high-confidence and still false here."
                                     },
                                     "requiresHuman": {
-                                      "type": "string",
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
                                       "description": "Why a human is needed. Null when autoApplicable is true."
                                     },
                                     "parameters": {
                                       "type": "object",
-                                      "description": "Machine-readable arguments for the action."
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "from": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "to": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "direction": {
+                                          "type": "string",
+                                          "enum": [
+                                            "outbound",
+                                            "inbound"
+                                          ]
+                                        },
+                                        "path": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "string",
+                                            "integer",
+                                            "number",
+                                            "boolean",
+                                            "object",
+                                            "array",
+                                            "any"
+                                          ]
+                                        },
+                                        "hasSuggestion": {
+                                          "type": "boolean"
+                                        },
+                                        "suggested": {
+                                          "type": [
+                                            "string",
+                                            "boolean",
+                                            "null"
+                                          ]
+                                        },
+                                        "event": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "at": {
+                                          "type": "string",
+                                          "enum": [
+                                            "before_send",
+                                            "after_receive"
+                                          ]
+                                        },
+                                        "removed": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "permitted": {
+                                          "type": [
+                                            "array",
+                                            "null"
+                                          ],
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "added": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "candidates": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "endpoint": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "sunsetOn": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ],
+                                          "format": "date-time"
+                                        },
+                                        "daysRemaining": {
+                                          "type": [
+                                            "integer",
+                                            "null"
+                                          ]
+                                        },
+                                        "field": {
+                                          "type": "string"
+                                        },
+                                        "maxPageSize": {
+                                          "type": [
+                                            "integer",
+                                            "null"
+                                          ],
+                                          "minimum": 1
+                                        },
+                                        "scope": {
+                                          "type": "string"
+                                        },
+                                        "previousSeconds": {
+                                          "type": [
+                                            "integer",
+                                            "null"
+                                          ],
+                                          "minimum": 1
+                                        },
+                                        "currentSeconds": {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        "suggestedRefreshSeconds": {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        "minIntervalMs": {
+                                          "type": [
+                                            "integer",
+                                            "null"
+                                          ],
+                                          "minimum": 1
+                                        },
+                                        "backoff": {
+                                          "type": [
+                                            "object",
+                                            "null"
+                                          ],
+                                          "required": [
+                                            "initialDelayMs",
+                                            "multiplier",
+                                            "maxDelayMs",
+                                            "maxAttempts"
+                                          ],
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "initialDelayMs": {
+                                              "type": "integer",
+                                              "minimum": 1
+                                            },
+                                            "multiplier": {
+                                              "type": "integer",
+                                              "minimum": 1
+                                            },
+                                            "maxDelayMs": {
+                                              "type": "integer",
+                                              "minimum": 1
+                                            },
+                                            "maxAttempts": {
+                                              "type": "integer",
+                                              "minimum": 1
+                                            }
+                                          }
+                                        },
+                                        "permittedInObservedWindow": {
+                                          "type": [
+                                            "integer",
+                                            "null"
+                                          ],
+                                          "minimum": 0
+                                        },
+                                        "excessRequests": {
+                                          "type": [
+                                            "integer",
+                                            "null"
+                                          ],
+                                          "minimum": 0
+                                        },
+                                        "code": {
+                                          "type": "string"
+                                        },
+                                        "target": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "description": "Action-specific machine-readable arguments. Branch on action before reading the corresponding subset."
                                     },
                                     "detail": {
                                       "type": "string"
@@ -237,31 +549,208 @@
                               },
                               "autoApplicable": {
                                 "type": "integer",
+                                "minimum": 0,
                                 "description": "Steps that can run without a human."
                               },
                               "requiresHuman": {
-                                "type": "integer"
+                                "type": "integer",
+                                "minimum": 0
                               },
                               "fullyAutomatic": {
                                 "type": "boolean",
                                 "description": "True only when every step is auto-applicable."
                               },
                               "minConfidence": {
-                                "type": "integer",
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100,
                                 "description": "The weakest step in the plan. Null when there are no steps."
                               }
                             }
                           },
                           "rateLimit": {
-                            "type": "object",
-                            "description": "Exact integer analysis of the limit change against your observed volume, with the minimum interval and a backoff schedule. Null when neither snapshot declares a limit."
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "required": [
+                              "previous",
+                              "current",
+                              "direction",
+                              "observedVolume",
+                              "permittedInObservedWindow",
+                              "excessRequests",
+                              "headroomPct",
+                              "willExceed",
+                              "minIntervalMs",
+                              "backoff"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "previous": {
+                                "type": "object",
+                                "required": [
+                                  "limit",
+                                  "windowSeconds"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "limit": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "windowSeconds": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                }
+                              },
+                              "current": {
+                                "type": "object",
+                                "required": [
+                                  "limit",
+                                  "windowSeconds"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "limit": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "windowSeconds": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                }
+                              },
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "reduced",
+                                  "increased",
+                                  "unchanged"
+                                ]
+                              },
+                              "observedVolume": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "required": [
+                                  "requests",
+                                  "windowSeconds"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "requests": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "windowSeconds": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                }
+                              },
+                              "permittedInObservedWindow": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0
+                              },
+                              "excessRequests": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0
+                              },
+                              "headroomPct": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "willExceed": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "minIntervalMs": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "backoff": {
+                                "type": "object",
+                                "required": [
+                                  "initialDelayMs",
+                                  "multiplier",
+                                  "maxDelayMs",
+                                  "maxAttempts"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                  "initialDelayMs": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "multiplier": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "maxDelayMs": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "maxAttempts": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                }
+                              }
+                            },
+                            "description": "Exact integer analysis of the limit change against observed volume. Null when both snapshots do not declare a comparable limit."
                           },
                           "sunsets": {
                             "type": "array",
                             "items": {
-                              "type": "object"
+                              "type": "object",
+                              "required": [
+                                "endpoint",
+                                "sunsetOn",
+                                "daysRemaining",
+                                "passed"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "endpoint": {
+                                  "type": "string"
+                                },
+                                "sunsetOn": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "daysRemaining": {
+                                  "type": "integer"
+                                },
+                                "passed": {
+                                  "type": "boolean"
+                                }
+                              }
                             },
                             "description": "Every current endpoint with a sunset date, soonest first, in whole UTC days."
+                          },
+                          "evaluatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "The exact instant used for deterministic sunset evaluation."
                           },
                           "warnings": {
                             "type": "array",
@@ -272,6 +761,10 @@
                           }
                         }
                       }
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
                     }
                   }
                 }
@@ -282,6 +775,9 @@
             "$ref": "#/components/responses/Error"
           },
           "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
             "$ref": "#/components/responses/Error"
           },
           "429": {
@@ -297,6 +793,18 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "oneOf": [
+                  {
+                    "required": [
+                      "check"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "checks"
+                    ]
+                  }
+                ],
                 "properties": {
                   "check": {
                     "type": "object",
@@ -1890,9 +2398,27 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": [
+                    "check",
+                    "requestId"
+                  ],
+                  "additionalProperties": false,
                   "properties": {
                     "check": {
                       "type": "object",
+                      "required": [
+                        "integrationId",
+                        "provider",
+                        "verdict",
+                        "summary",
+                        "changes",
+                        "repairPlan",
+                        "rateLimit",
+                        "sunsets",
+                        "evaluatedAt",
+                        "warnings"
+                      ],
+                      "additionalProperties": false,
                       "properties": {
                         "integrationId": {
                           "type": "string"
@@ -1910,12 +2436,67 @@
                         },
                         "summary": {
                           "type": "object",
-                          "description": "Totals by severity, plus counts by code and by surface."
+                          "required": [
+                            "total",
+                            "breaking",
+                            "degraded",
+                            "safe",
+                            "byCode",
+                            "bySurface"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "breaking": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "degraded": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "safe": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "byCode": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "description": "A map whose keys are emitted drift codes or surfaces and whose values are occurrence counts."
+                            },
+                            "bySurface": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "description": "A map whose keys are emitted drift codes or surfaces and whose values are occurrence counts."
+                            }
+                          }
                         },
                         "changes": {
                           "type": "array",
                           "items": {
                             "type": "object",
+                            "required": [
+                              "code",
+                              "surface",
+                              "direction",
+                              "target",
+                              "container",
+                              "breaking",
+                              "severity",
+                              "from",
+                              "to",
+                              "detail"
+                            ],
+                            "additionalProperties": false,
                             "properties": {
                               "code": {
                                 "type": "string",
@@ -1946,7 +2527,10 @@
                                 "description": "The field path, scope, event name or endpoint the change lands on."
                               },
                               "container": {
-                                "type": "string",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
                                 "description": "An endpoint label like \"POST /v2/orders\", a webhook event name, or null for auth and rate limits."
                               },
                               "breaking": {
@@ -1962,10 +2546,16 @@
                                 ]
                               },
                               "from": {
-                                "type": "string"
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "to": {
-                                "type": "string"
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "detail": {
                                 "type": "string",
@@ -1977,15 +2567,38 @@
                         },
                         "repairPlan": {
                           "type": "object",
+                          "required": [
+                            "steps",
+                            "autoApplicable",
+                            "requiresHuman",
+                            "fullyAutomatic",
+                            "minConfidence"
+                          ],
+                          "additionalProperties": false,
                           "description": "The ordered remediation. One step per breaking or degraded change; safe changes get none.",
                           "properties": {
                             "steps": {
                               "type": "array",
                               "items": {
                                 "type": "object",
+                                "required": [
+                                  "change",
+                                  "action",
+                                  "phase",
+                                  "order",
+                                  "target",
+                                  "container",
+                                  "confidence",
+                                  "autoApplicable",
+                                  "requiresHuman",
+                                  "parameters",
+                                  "detail"
+                                ],
+                                "additionalProperties": false,
                                 "properties": {
                                   "change": {
                                     "type": "integer",
+                                    "minimum": 0,
                                     "description": "Index into `changes` of the drift this repairs."
                                   },
                                   "action": {
@@ -2005,13 +2618,17 @@
                                   },
                                   "order": {
                                     "type": "integer",
+                                    "minimum": 1,
                                     "description": "1-based. Apply in ascending order: auth before routing before schemas before throughput."
                                   },
                                   "target": {
                                     "type": "string"
                                   },
                                   "container": {
-                                    "type": "string"
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   },
                                   "confidence": {
                                     "type": "integer",
@@ -2024,12 +2641,207 @@
                                     "description": "True only when applying it mechanically cannot lose information, change what you store, or weaken a security check. A repair can be high-confidence and still false here."
                                   },
                                   "requiresHuman": {
-                                    "type": "string",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
                                     "description": "Why a human is needed. Null when autoApplicable is true."
                                   },
                                   "parameters": {
                                     "type": "object",
-                                    "description": "Machine-readable arguments for the action."
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "from": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "to": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "direction": {
+                                        "type": "string",
+                                        "enum": [
+                                          "outbound",
+                                          "inbound"
+                                        ]
+                                      },
+                                      "path": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "string",
+                                          "integer",
+                                          "number",
+                                          "boolean",
+                                          "object",
+                                          "array",
+                                          "any"
+                                        ]
+                                      },
+                                      "hasSuggestion": {
+                                        "type": "boolean"
+                                      },
+                                      "suggested": {
+                                        "type": [
+                                          "string",
+                                          "boolean",
+                                          "null"
+                                        ]
+                                      },
+                                      "event": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "at": {
+                                        "type": "string",
+                                        "enum": [
+                                          "before_send",
+                                          "after_receive"
+                                        ]
+                                      },
+                                      "removed": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "permitted": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "added": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "candidates": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "endpoint": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "sunsetOn": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "format": "date-time"
+                                      },
+                                      "daysRemaining": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ]
+                                      },
+                                      "field": {
+                                        "type": "string"
+                                      },
+                                      "maxPageSize": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ],
+                                        "minimum": 1
+                                      },
+                                      "scope": {
+                                        "type": "string"
+                                      },
+                                      "previousSeconds": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ],
+                                        "minimum": 1
+                                      },
+                                      "currentSeconds": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      "suggestedRefreshSeconds": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                      },
+                                      "minIntervalMs": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ],
+                                        "minimum": 1
+                                      },
+                                      "backoff": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "required": [
+                                          "initialDelayMs",
+                                          "multiplier",
+                                          "maxDelayMs",
+                                          "maxAttempts"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "initialDelayMs": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                          },
+                                          "multiplier": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                          },
+                                          "maxDelayMs": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                          },
+                                          "maxAttempts": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                          }
+                                        }
+                                      },
+                                      "permittedInObservedWindow": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ],
+                                        "minimum": 0
+                                      },
+                                      "excessRequests": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ],
+                                        "minimum": 0
+                                      },
+                                      "code": {
+                                        "type": "string"
+                                      },
+                                      "target": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "description": "Action-specific machine-readable arguments. Branch on action before reading the corresponding subset."
                                   },
                                   "detail": {
                                     "type": "string"
@@ -2040,31 +2852,208 @@
                             },
                             "autoApplicable": {
                               "type": "integer",
+                              "minimum": 0,
                               "description": "Steps that can run without a human."
                             },
                             "requiresHuman": {
-                              "type": "integer"
+                              "type": "integer",
+                              "minimum": 0
                             },
                             "fullyAutomatic": {
                               "type": "boolean",
                               "description": "True only when every step is auto-applicable."
                             },
                             "minConfidence": {
-                              "type": "integer",
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 100,
                               "description": "The weakest step in the plan. Null when there are no steps."
                             }
                           }
                         },
                         "rateLimit": {
-                          "type": "object",
-                          "description": "Exact integer analysis of the limit change against your observed volume, with the minimum interval and a backoff schedule. Null when neither snapshot declares a limit."
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "previous",
+                            "current",
+                            "direction",
+                            "observedVolume",
+                            "permittedInObservedWindow",
+                            "excessRequests",
+                            "headroomPct",
+                            "willExceed",
+                            "minIntervalMs",
+                            "backoff"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "previous": {
+                              "type": "object",
+                              "required": [
+                                "limit",
+                                "windowSeconds"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "windowSeconds": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                }
+                              }
+                            },
+                            "current": {
+                              "type": "object",
+                              "required": [
+                                "limit",
+                                "windowSeconds"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "windowSeconds": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                }
+                              }
+                            },
+                            "direction": {
+                              "type": "string",
+                              "enum": [
+                                "reduced",
+                                "increased",
+                                "unchanged"
+                              ]
+                            },
+                            "observedVolume": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "required": [
+                                "requests",
+                                "windowSeconds"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "requests": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "windowSeconds": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                }
+                              }
+                            },
+                            "permittedInObservedWindow": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "excessRequests": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "headroomPct": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "willExceed": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "minIntervalMs": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "backoff": {
+                              "type": "object",
+                              "required": [
+                                "initialDelayMs",
+                                "multiplier",
+                                "maxDelayMs",
+                                "maxAttempts"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "initialDelayMs": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "multiplier": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "maxDelayMs": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "maxAttempts": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                }
+                              }
+                            }
+                          },
+                          "description": "Exact integer analysis of the limit change against observed volume. Null when both snapshots do not declare a comparable limit."
                         },
                         "sunsets": {
                           "type": "array",
                           "items": {
-                            "type": "object"
+                            "type": "object",
+                            "required": [
+                              "endpoint",
+                              "sunsetOn",
+                              "daysRemaining",
+                              "passed"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "endpoint": {
+                                "type": "string"
+                              },
+                              "sunsetOn": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "daysRemaining": {
+                                "type": "integer"
+                              },
+                              "passed": {
+                                "type": "boolean"
+                              }
+                            }
                           },
                           "description": "Every current endpoint with a sunset date, soonest first, in whole UTC days."
+                        },
+                        "evaluatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "The exact instant used for deterministic sunset evaluation."
                         },
                         "warnings": {
                           "type": "array",
@@ -2074,6 +3063,10 @@
                           "description": "Usually a piece of usage data that was not supplied, and the severity we refused to lower because of it."
                         }
                       }
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
                     }
                   }
                 }
@@ -3425,7 +4418,7 @@
                 }
               },
               "example": {
-                "token": "EXAMPLE_CLAIM_TOKEN_NOT_A_SECRET"
+                "token": "eyJ2IjoxLCJlIjoieW91QGV4YW1wbGUuY29tIn0.ZXhhbXBsZQ"
               }
             }
           }

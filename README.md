@@ -81,13 +81,12 @@ curl -sS -X POST https://integrationrecovery-api.com/v1/checks \
 - [TypeScript SDK](./sdk/typescript/index.ts)
 
 The request shown here is a supported runtime example and has been checked
-against the deployed comparison engine. The current OpenAPI document describes
-the routes and documented request shapes, but it is not authoritative for the
-still-unreconciled nullable or opaque response fields. Generated/certified
-connector use remains held until Development reconciles the deployed runtime,
-OpenAPI, and SDK request exclusivity, required fields, response shapes,
-nullability, `evaluatedAt`, and `rateLimit` behavior. This hold does not prevent
-the exact direct-HTTP example above from being used.
+against the deployed comparison engine. The OpenAPI document, generated SDKs,
+and production runtime now agree on the exactly-one-of `check`/`checks` input,
+closed repair parameters, response fields and nullability, `evaluatedAt`,
+`rateLimit`, and the `413 payload_too_large` error envelope. Connector builders
+can use the published contract directly; the examples above remain the fastest
+way to confirm the first useful result.
 
 ## Collection scope
 
