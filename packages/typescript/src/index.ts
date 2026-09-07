@@ -173,7 +173,8 @@ export interface Repair {
    */
   autoApplicable: boolean
   requiresHuman: string | null
-  parameters: Record<string, unknown>
+  /** Closed, contract-generated set of action-specific arguments. */
+  parameters: RepairParameters
   detail: string
 }
 
@@ -246,8 +247,8 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
     this.code = code
-    this.requestId = requestId
-    this.details = details
+    if (requestId !== undefined) this.requestId = requestId
+    if (details !== undefined) this.details = details
   }
 }
 
@@ -338,7 +339,7 @@ export class IntegrationRecovery {
   }
 
   /** The real engine with no key: one check, at most 5 endpoints and 60 fields. */
-  async demoCheck(check: IntegrationCheckInput): Promise<{ check: IntegrationDrift }> {
+  async demoCheck(check: IntegrationCheckInput): Promise<{ check: IntegrationDrift; requestId: string }> {
     return this.request('POST', '/v1/demo/check', { check }, false)
   }
 
@@ -412,6 +413,8 @@ export interface OperationDescriptor {
   readonly pathParams: readonly string[]
   readonly queryParams: readonly string[]
   readonly requiredBodyFields: readonly string[]
+  /** Alternative required-field sets from a root `oneOf`; exactly one set must be satisfied. */
+  readonly requiredBodyFieldAlternatives: readonly (readonly string[])[]
   readonly successStatus: number | null
   /** Property names of the documented 2xx body. A field absent here is a field the service does not promise. */
   readonly responseFields: readonly string[]
@@ -432,6 +435,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: [],
   },
@@ -445,6 +449,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: [],
   },
@@ -458,6 +463,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: [],
   },
@@ -471,6 +477,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: ["tier"],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["checkoutUrl", "tier", "sku", "requestId"],
   },
@@ -484,8 +491,9 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [["check"], ["checks"]],
     successStatus: 200,
-    responseFields: ["count", "breaking", "checks"],
+    responseFields: ["count", "breaking", "checks", "requestId"],
   },
   {
     operationId: "postV1DemoCheck",
@@ -497,8 +505,9 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: ["check"],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
-    responseFields: ["check"],
+    responseFields: ["check", "requestId"],
   },
   {
     operationId: "getV1DriftTypes",
@@ -510,6 +519,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["directions", "severities", "verdicts", "driftCodes", "repairPhases", "repairActions", "rules", "limits"],
   },
@@ -523,6 +533,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["product", "count", "note", "invoices", "requestId"],
   },
@@ -536,6 +547,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["product", "accountId", "keys", "requestId"],
   },
@@ -549,6 +561,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: ["email"],
+    requiredBodyFieldAlternatives: [],
     successStatus: 202,
     responseFields: ["status", "email", "expiresAt", "next", "message", "requestId"],
   },
@@ -562,6 +575,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: ["id"],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["id", "status", "message", "requestId"],
   },
@@ -575,6 +589,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: ["id"],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 201,
     responseFields: ["apiKey", "keyId", "replaced", "product", "quotaPerPeriod", "plan", "warning", "requestId"],
   },
@@ -588,6 +603,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: ["token"],
+    requiredBodyFieldAlternatives: [],
     successStatus: 201,
     responseFields: ["apiKey", "keyId", "product", "quotaPerPeriod", "plan", "warning", "usage", "requestId"],
   },
@@ -601,6 +617,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["product", "count", "note", "payments", "requestId"],
   },
@@ -614,6 +631,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["product", "subscribed", "status", "plan", "pendingPlan", "planChangesGoThrough", "baseFeeOwner", "cancellation", "tiers", "requestId"],
   },
@@ -627,6 +645,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["canceled", "canceledAt", "entitlement", "money", "finalInvoice", "requestId"],
   },
@@ -640,6 +659,7 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: ["planId"],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["changed", "direction", "from", "to", "entitlement", "billing", "requestId"],
   },
@@ -653,8 +673,47 @@ export const OPERATIONS: readonly OperationDescriptor[] = [
     pathParams: [],
     queryParams: [],
     requiredBodyFields: [],
+    requiredBodyFieldAlternatives: [],
     successStatus: 200,
     responseFields: ["product", "tier", "status", "unit", "period", "included", "used", "ceiling", "remaining", "overageSoFarMinor", "spendCapMinor", "requestId"],
   },
 ]
+
+/** `RepairParameters` — generated from POST /v1/checks (properties/checks/items/properties/repairPlan/properties/steps/items/properties/parameters). */
+export interface RepairParameters {
+  from?: string | null
+  to?: string | null
+  direction?: "outbound" | "inbound"
+  path?: string
+  type?: "string" | "integer" | "number" | "boolean" | "object" | "array" | "any"
+  hasSuggestion?: boolean
+  suggested?: string | boolean | null
+  event?: string | null
+  at?: "before_send" | "after_receive"
+  removed?: string[]
+  permitted?: string[] | null
+  added?: string[]
+  candidates?: string[]
+  endpoint?: string | null
+  sunsetOn?: string | null
+  daysRemaining?: number | null
+  field?: string
+  maxPageSize?: number | null
+  scope?: string
+  previousSeconds?: number | null
+  currentSeconds?: number
+  suggestedRefreshSeconds?: number
+  minIntervalMs?: number | null
+  backoff?: {
+    initialDelayMs: number
+    multiplier: number
+    maxDelayMs: number
+    maxAttempts: number
+  } | null
+  permittedInObservedWindow?: number | null
+  excessRequests?: number | null
+  code?: string
+  target?: string
+}
+
 // ---8<--- END GENERATED BY tools/gen-sdk.mjs ---8<---
